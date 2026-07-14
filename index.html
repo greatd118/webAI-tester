@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0b0b1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .loader-container {
+            text-align: center;
+            color: #fff;
+        }
+        .loader {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border: 8px solid rgba(255,255,255,0.1);
+            border-top: 8px solid #00f0ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .glow-text {
+            font-size: 18px;
+            color: #a0a0c0;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #00f0ff55;
+        }
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: #1a1a2e;
+            margin: 20px auto 0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00f0ff, #a855f7);
+            animation: load 2.5s ease-in-out forwards;
+        }
+        @keyframes load {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader-container">
+        <div class="loader"></div>
+        <div class="glow-text">⚡ Menginisialisasi perangkat...</div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <p style="margin-top:20px; font-size:13px; color:#555;">Tunggu sebentar, ya~</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
