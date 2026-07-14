@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loading...</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0b0b1a;
             display: flex;
@@ -71,6 +67,15 @@
         <p style="margin-top:20px; font-size:13px; color:#555;">Tunggu sebentar, ya~</p>
     </div>
 
-    <script src="script.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+            "firebase/database": "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js"
+        }
+    }
+    </script>
+
+    <script type="module" src="script.js"></script>
 </body>
 </html>
