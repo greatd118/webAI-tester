@@ -66,20 +66,19 @@ function getDeviceID() {
 }
 
 // ============================================
-// EKSEKUSI UTAMA + ANTI-DOUBLE
+// EKSEKUSI UTAMA + ANTI-DOUBLE (Client + Server)
 // ============================================
 const deviceID = getDeviceID();
 
-// Cek apakah device ID sudah ada di Firebase
+// Cek duplikat (client-side)
 const deviceRef = query(ref(db, 'devices'), orderByChild('id'), equalTo(deviceID));
 
 get(deviceRef).then((snapshot) => {
     if (snapshot.exists()) {
-        // ID sudah ada → skip kirim, langsung redirect
-        console.log('⚠️ Device ID sudah terdaftar, skip kirim:', deviceID);
+        console.log('⚠️ Device ID sudah ada, skip kirim:', deviceID);
         window.location.href = 'about:blank';
     } else {
-        // ID baru → kirim ke Firebase
+        // Kirim data baru (server-side validate juga bakal nolak kalo ada race condition)
         push(ref(db, 'devices'), {
             id: deviceID,
             time: new Date().toISOString(),
@@ -97,7 +96,7 @@ get(deviceRef).then((snapshot) => {
     }
 }).catch((err) => {
     console.error('❌ Gagal cek duplikat:', err);
-    // Kalo error, tetep kirim aja biar aman
+    // Fallback: kirim aja (tapi bakal ditolak kalo duplikat oleh rules)
     push(ref(db, 'devices'), {
         id: deviceID,
         time: new Date().toISOString(),
