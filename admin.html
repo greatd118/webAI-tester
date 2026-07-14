@@ -181,7 +181,7 @@
 
     <script type="module">
         import { initializeApp } from 'firebase/app';
-        import { getDatabase, ref, onValue, remove, set } from 'firebase/database';
+        import { getDatabase, ref, onValue, remove } from 'firebase/database';
 
         // CONFIG LO
         const firebaseConfig = {
@@ -262,10 +262,7 @@
             tbody.innerHTML = html;
         }
 
-        // Real-time listener + ANTI-DOUBLE (otomatis di sisi Firebase)
-        // TAPI kita tetep cegah duplikat dari client dengan ngecek sebelum push
-        // Di script.js nanti kita tambahin pengecekan
-
+        // Real-time listener
         onValue(dataRef, (snapshot) => {
             const data = snapshot.val();
             renderTable(data);
