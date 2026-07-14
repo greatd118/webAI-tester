@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Device ID</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a1a;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+        h1 {
+            color: #00f0ff;
+            text-shadow: 0 0 20px #00f0ff44;
+            border-bottom: 1px solid #00f0ff33;
+            padding-bottom: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .stats span {
+            background: #111128;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 1px solid #333366;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #1a1a3a;
+        }
+        th {
+            color: #a855f7;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 13px;
+        }
+        td {
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .id-highlight {
+            color: #00f0ff;
+            font-weight: bold;
+        }
+        .btn {
+            background: #1a1a3a;
+            border: none;
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 5px 5px 0 0;
+            font-family: inherit;
+        }
+        .btn:hover {
+            background: #2a2a5a;
+        }
+        .footer {
+            margin-top: 40px;
+            color: #444;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕵️ DEVICE ID LOGGER</h1>
+    <div class="stats">
+        <span>📱 Total perangkat: <strong id="count">0</strong></span>
+        <span>🕒 Data terakhir: <strong id="lastTime">-</strong></span>
+    </div>
+    <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+    <button class="btn" onclick="clearData()">🗑️ Hapus semua</button>
+    <button class="btn" onclick="exportCSV()">⬇️ Export CSV</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Device ID</th>
+                <th>Waktu</th>
+                <th>User Agent</th>
+            </tr>
+        </thead>
+        <tbody id="dataBody">
+            <tr><td colspan="4" style="text-align:center; color:#555;">Belum ada data</td></tr>
+        </tbody>
+    </table>
+    <div class="footer">— data disimpan di localStorage browser ini aja —</div>
+
+    <script>
+        function renderTable() {
+            const raw = localStorage.getItem('deviceData');
+            const data = raw ? JSON.parse(raw) : [];
+            const tbody = document.getElementById('dataBody');
+            const count = document.getElementById('count');
+            const lastTime = document.getElementById('lastTime');
+
+            count.textContent = data.length;
+            if (data.length > 0) {
+                const last = data[data.length - 1];
+                lastTime.textContent = new Date(last.time).toLocaleString('id-ID');
+            } else {
+                lastTime.textContent = '-';
+            }
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#555;">Belum ada data</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.forEach((item, idx) => {
+                html += `<tr>
+                    <td>${idx + 1}</td>
+                    <td class="id-highlight">${item.id}</td>
+                    <td>${new Date(item.time).toLocaleString('id-ID')}</td>
+                    <td style="font-size:11px; color:#888;">${item.userAgent.substring(0, 60)}...</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function refreshData() {
+            renderTable();
+        }
+
+        function clearData() {
+            if (confirm('Yakin hapus semua data device ID?')) {
+                localStorage.removeItem('deviceData');
+                renderTable();
+            }
+        }
+
+        function exportCSV() {
+            const raw = localStorage.getItem('deviceData');
+            const data = raw ? JSON.parse(raw) : [];
+            if (data.length === 0) {
+                alert('Tidak ada data buat di-export!');
+                return;
+            }
+            let csv = 'Device ID,Waktu,User Agent\n';
+            data.forEach(item => {
+                csv += `"${item.id}","${item.time}","${item.userAgent.replace(/"/g, '""')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'device_ids.csv';
+            link.click();
+        }
+
+        // Auto render
+        renderTable();
+    </script>
+</body>
+</html>
