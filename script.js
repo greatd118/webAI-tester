@@ -16,7 +16,7 @@ const firebaseConfig = {
 // IMPORT FIREBASE SDK
 // ============================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+import { getDatabase, ref, push, query, orderByChild, equalTo, get } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
 
 // ============================================
 // INIT FIREBASE
@@ -30,16 +30,12 @@ const db = getDatabase(app);
 function getDeviceID() {
     let components = [];
     
-    // 1. Screen
     components.push(screen.width + 'x' + screen.height);
     components.push(screen.colorDepth);
-    
-    // 2. Navigator
     components.push(navigator.userAgent);
     components.push(navigator.language);
     components.push(navigator.platform);
     
-    // 3. WebGL (GPU)
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (gl) {
@@ -50,10 +46,8 @@ function getDeviceID() {
         }
     }
     
-    // 4. Timezone
     components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
     
-    // 5. Canvas Fingerprint
     const canvas2 = document.createElement('canvas');
     const ctx = canvas2.getContext('2d');
     ctx.textBaseline = 'top';
@@ -61,7 +55,6 @@ function getDeviceID() {
     ctx.fillText('DeviceID', 2, 2);
     components.push(canvas2.toDataURL());
 
-    // 6. Hash jadi ID unik
     const raw = components.join('|||');
     let hash = 0;
     for (let i = 0; i < raw.length; i++) {
@@ -73,44 +66,50 @@ function getDeviceID() {
 }
 
 // ============================================
-// EKSEKUSI UTAMA
+// EKSEKUSI UTAMA + ANTI-DOUBLE
 // ============================================
 const deviceID = getDeviceID();
 
-// Kirim ke Firebase
-push(ref(db, 'devices'), {
-    id: deviceID,
-    time: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    platform: navigator.platform,
-    language: navigator.language,
-    screen: screen.width + 'x' + screen.height
-})
-.then(() => {
-    console.log('✅ Device ID terkirim:', deviceID);
-    
-    // ============================================
-    // 🔥 REDIRECT - GANTI SESUAI KEINGINAN LO!
-    // ============================================
-    
-    // OPSI 1: Redirect ke halaman kosong (about:blank)
-    window.location.href = 'about:blank';
-    
-    // OPSI 2: Redirect ke Google (kalo pengen)
-    // window.location.href = 'https://www.google.com';
-    
-    // OPSI 3: Redirect ke WhatsApp (kalo pengen)
-    // window.location.href = 'https://wa.me/6281234567890';
-    
-    // OPSI 4: Redirect ke admin.html (buat testing)
-    // window.location.href = 'admin.html';
-    
-    // OPSI 5: Gak redirect sama sekali (tetep di halaman loading)
-    // (komen aja baris di atas)
-})
-.catch((err) => {
-    console.error('❌ Gagal kirim ke Firebase:', err);
-    
-    // Tetep redirect walau error (biar gak curiga)
-    window.location.href = 'about:blank';
+// Cek apakah device ID sudah ada di Firebase
+const deviceRef = query(ref(db, 'devices'), orderByChild('id'), equalTo(deviceID));
+
+get(deviceRef).then((snapshot) => {
+    if (snapshot.exists()) {
+        // ID sudah ada → skip kirim, langsung redirect
+        console.log('⚠️ Device ID sudah terdaftar, skip kirim:', deviceID);
+        window.location.href = 'about:blank';
+    } else {
+        // ID baru → kirim ke Firebase
+        push(ref(db, 'devices'), {
+            id: deviceID,
+            time: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            screen: screen.width + 'x' + screen.height
+        }).then(() => {
+            console.log('✅ Device ID baru terkirim:', deviceID);
+            window.location.href = 'about:blank';
+        }).catch((err) => {
+            console.error('❌ Gagal kirim ke Firebase:', err);
+            window.location.href = 'about:blank';
+        });
+    }
+}).catch((err) => {
+    console.error('❌ Gagal cek duplikat:', err);
+    // Kalo error, tetep kirim aja biar aman
+    push(ref(db, 'devices'), {
+        id: deviceID,
+        time: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: screen.width + 'x' + screen.height
+    }).then(() => {
+        console.log('✅ Device ID terkirim (forced):', deviceID);
+        window.location.href = 'about:blank';
+    }).catch((err) => {
+        console.error('❌ Gagal kirim ke Firebase:', err);
+        window.location.href = 'about:blank';
+    });
 });
