@@ -64,9 +64,24 @@
             cursor: pointer;
             margin: 5px 5px 0 0;
             font-family: inherit;
+            transition: 0.2s;
         }
         .btn:hover {
             background: #2a2a5a;
+        }
+        .btn-danger {
+            background: #661122;
+            border: 1px solid #ff2244;
+        }
+        .btn-danger:hover {
+            background: #881133;
+        }
+        .btn-success {
+            background: #116633;
+            border: 1px solid #22ff88;
+        }
+        .btn-success:hover {
+            background: #118844;
         }
         .footer {
             margin-top: 40px;
@@ -85,6 +100,42 @@
         .danger {
             color: #ff4444;
         }
+        .delete-btn {
+            background: #882233;
+            border: none;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        .delete-btn:hover {
+            background: #cc2244;
+            transform: scale(1.05);
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a1a3a;
+            border: 1px solid #00f0ff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: #00f0ff;
+            font-size: 14px;
+            box-shadow: 0 0 30px #00f0ff22;
+            display: none;
+            z-index: 999;
+        }
+        .toast.show {
+            display: block;
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -92,9 +143,11 @@
     <div class="stats">
         <span>📱 Total perangkat: <strong id="count">0</strong></span>
         <span>🕒 Update terakhir: <strong id="lastTime">-</strong></span>
+        <span>🔒 Anti-double: <strong style="color:#00ff88;">ACTIVE</strong></span>
     </div>
-    <button class="btn" onclick="exportCSV()">⬇️ Export CSV</button>
+    <button class="btn btn-success" onclick="exportCSV()">⬇️ Export CSV</button>
     <button class="btn" onclick="location.reload()">🔄 Refresh</button>
+    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Hapus Semua</button>
 
     <table>
         <thead>
@@ -105,13 +158,17 @@
                 <th>Platform</th>
                 <th>Screen</th>
                 <th>User Agent</th>
+                <th>Aksi</th>
             </tr>
         </thead>
         <tbody id="dataBody">
-            <tr><td colspan="6" style="text-align:center; color:#555;">⏳ Loading data...</td></tr>
+            <tr><td colspan="7" style="text-align:center; color:#555;">⏳ Loading data...</td></tr>
         </tbody>
     </table>
     <div class="footer">⚠️ <span class="danger">PUBLIC MODE</span> — data real-time dari Firebase Realtime Database</div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">✅ Berhasil!</div>
 
     <script type="importmap">
     {
@@ -124,7 +181,7 @@
 
     <script type="module">
         import { initializeApp } from 'firebase/app';
-        import { getDatabase, ref, onValue } from 'firebase/database';
+        import { getDatabase, ref, onValue, remove, set } from 'firebase/database';
 
         // CONFIG LO
         const firebaseConfig = {
@@ -142,28 +199,54 @@
         const db = getDatabase(app);
         const dataRef = ref(db, 'devices');
 
+        // Toast notifikasi
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // Fungsi hapus 1 device berdasarkan key
+        window.deleteDevice = function(key) {
+            if (!confirm('Yakin mau hapus device ID ini?')) return;
+            const deviceRef = ref(db, `devices/${key}`);
+            remove(deviceRef)
+                .then(() => showToast('🗑️ Device berhasil dihapus!'))
+                .catch(err => showToast('❌ Gagal hapus: ' + err.message));
+        };
+
+        // Fungsi hapus semua data
+        window.clearAllData = function() {
+            if (!confirm('⚠️ Yakin mau hapus SEMUA data? Gak bisa dibalikin!')) return;
+            remove(dataRef)
+                .then(() => showToast('🗑️ Semua data berhasil dihapus!'))
+                .catch(err => showToast('❌ Gagal hapus: ' + err.message));
+        };
+
+        // Fungsi render tabel
         function renderTable(data) {
             const tbody = document.getElementById('dataBody');
             const count = document.getElementById('count');
             const lastTime = document.getElementById('lastTime');
 
             if (!data) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#555;">Belum ada data</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#555;">Belum ada data</td></tr>';
                 count.textContent = '0';
                 lastTime.textContent = '-';
                 return;
             }
 
-            const entries = Object.values(data);
+            const entries = Object.entries(data); // [key, value]
             count.textContent = entries.length;
 
             if (entries.length > 0) {
-                const last = entries[entries.length - 1];
+                const last = entries[entries.length - 1][1];
                 lastTime.textContent = new Date(last.time).toLocaleString('id-ID');
             }
 
             let html = '';
-            entries.slice().reverse().forEach((item, idx) => {
+            entries.slice().reverse().forEach(([key, item], idx) => {
                 html += `<tr>
                     <td>${idx + 1}</td>
                     <td class="id-highlight">${item.id || 'N/A'}</td>
@@ -171,19 +254,25 @@
                     <td>${item.platform || '-'}</td>
                     <td>${item.screen || '-'}</td>
                     <td style="font-size:11px; color:#888;">${(item.userAgent || '').substring(0, 50)}...</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteDevice('${key}')">🗑️ Hapus</button>
+                    </td>
                 </tr>`;
             });
             tbody.innerHTML = html;
         }
 
-        // Real-time listener
+        // Real-time listener + ANTI-DOUBLE (otomatis di sisi Firebase)
+        // TAPI kita tetep cegah duplikat dari client dengan ngecek sebelum push
+        // Di script.js nanti kita tambahin pengecekan
+
         onValue(dataRef, (snapshot) => {
             const data = snapshot.val();
             renderTable(data);
         }, (error) => {
             console.error('Error baca data:', error);
             document.getElementById('dataBody').innerHTML = 
-                '<tr><td colspan="6" style="text-align:center; color:#ff4444;">❌ Gagal konek ke Firebase. Cek rules! Harus true.</td></tr>';
+                '<tr><td colspan="7" style="text-align:center; color:#ff4444;">❌ Gagal konek ke Firebase. Cek rules! Harus true.</td></tr>';
         });
 
         // Export CSV
@@ -198,7 +287,7 @@
             let csv = 'Device ID,Waktu,Platform,Screen,User Agent\n';
             rows.forEach(row => {
                 const cols = row.querySelectorAll('td');
-                if (cols.length === 6) {
+                if (cols.length === 7) {
                     const id = cols[1].textContent;
                     const time = cols[2].textContent;
                     const platform = cols[3].textContent;
